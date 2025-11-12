@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="hi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gmail से साइन-इन और फोटो/वीडियो अपलोड</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h2>GitHub Photo & Video Uploader</h2>
+    <div id="user-area"><button id="login-btn">Sign in with Google</button></div>
+  </header>
+
+  <main>
+    <section id="uploader" style="display:none">
+      <h3>अपना पोस्ट डालें</h3>
+      <input type="file" id="media-file" accept="image/*,video/*"><br><br>
+      <input id="caption" placeholder="Caption लिखें (वैकल्पिक)" style="width:80%"><br><br>
+      <button id="upload-btn">Upload</button>
+      <button id="logout-btn">Logout</button>
+      <p id="upload-status" style="color:green"></p>
+    </section>
+
+    <section id="posts"></section>
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
