@@ -1,30 +1,353 @@
+<!--
+photo_video_social.html
+Simple GitHub-ready single-file demo (static, client-side only)
+Features:
+ - Create a simple username + profile photo (stored in localStorage)
+ - Create posts with image OR video (stored as data URLs in localStorage)
+ - Home page lists all posts with poster name & profile photo
+ - Other users can like and comment on posts (likes & comments persisted in localStorage)
+
+Notes:
+ - This is a demo meant for GitHub Pages / static hosting. No backend.
+ - For production (real multi-user app) you'd need a server + database
+ - To use: save this file as index.html and open in browser or host on GitHub Pages
+-->
+
 <!doctype html>
 <html lang="hi">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Gmail से साइन-इन और फोटो/वीडियो अपलोड</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Simple Photo/Video Social (Demo)</title>
+  <style>
+    :root{--accent:#2b6cb0}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,'Noto Sans',Ubuntu,'Helvetica Neue',Arial; margin:0; background:#f5f7fb; color:#0f172a}
+    header{background:white; padding:12px 18px; display:flex; align-items:center; justify-content:space-between; box-shadow:0 1px 4px rgba(16,24,40,.06)}
+    .brand{font-weight:700}
+    .container{max-width:920px; margin:20px auto; padding:0 12px}
+    .card{background:white; border-radius:10px; padding:12px; box-shadow:0 6px 18px rgba(15,23,42,.04); margin-bottom:16px}
+    .row{display:flex; gap:12px; align-items:center}
+    .profile-thumb{width:48px; height:48px; border-radius:50%; object-fit:cover}
+    .button{background:var(--accent); color:white; padding:8px 12px; border:none; border-radius:8px; cursor:pointer}
+    .muted{color:#6b7280}
+    input[type=file]{display:block}
+    .post-media{max-width:100%; border-radius:8px; margin-top:8px}
+    .like-btn{background:transparent; border:none; cursor:pointer; color:var(--accent); font-weight:600}
+    .comments{margin-top:8px}
+    .comment{padding:6px 8px; border-radius:8px; background:#f1f5f9; margin-bottom:6px}
+    .flex-between{display:flex; justify-content:space-between; align-items:center}
+    .small{font-size:13px}
+    .nav-right{display:flex; gap:8px; align-items:center}
+    .hidden{display:none}
+    footer{margin:30px 0; text-align:center; color:#6b7280}
+    @media (max-width:640px){.row{flex-direction:column; align-items:flex-start}}
+  </style>
 </head>
 <body>
   <header>
-    <h2>GitHub Photo & Video Uploader</h2>
-    <div id="user-area"><button id="login-btn">Sign in with Google</button></div>
+    <div class="brand">PhotoVideoHub (Demo)</div>
+    <div class="nav-right">
+      <div id="currentUserPreview" class="row muted small"></div>
+      <button id="logoutBtn" class="button hidden">Logout</button>
+    </div>
   </header>
 
-  <main>
-    <section id="uploader" style="display:none">
-      <h3>अपना पोस्ट डालें</h3>
-      <input type="file" id="media-file" accept="image/*,video/*"><br><br>
-      <input id="caption" placeholder="Caption लिखें (वैकल्पिक)" style="width:80%"><br><br>
-      <button id="upload-btn">Upload</button>
-      <button id="logout-btn">Logout</button>
-      <p id="upload-status" style="color:green"></p>
+  <main class="container">
+    <section id="authSection" class="card">
+      <h3>अपना अकाउंट बनाएं / लॉगिन करें</h3>
+      <div class="row" style="align-items:flex-start">
+        <div style="flex:1">
+          <label class="small">उपयोगकर्ता नाम (नाम)</label>
+          <input id="usernameInput" placeholder="अपना नाम दर्ज करें" style="width:100%; padding:8px; margin-top:6px; border-radius:6px; border:1px solid #e6edf3">
+
+          <label class="small" style="display:block; margin-top:10px">प्रोफ़ाइल फोटो चुनें (वैकल्पिक)</label>
+          <input id="profilePhotoInput" type="file" accept="image/*">
+
+          <div style="margin-top:10px">
+            <button id="createAccountBtn" class="button">सहेजें और लॉगिन करें</button>
+          </div>
+        </div>
+        <div style="width:160px; text-align:center">
+          <div style="font-size:13px; color:#374151; margin-bottom:6px">लॉगिनेड यूज़र</div>
+          <img id="previewProfilePic" class="profile-thumb" src="" alt="preview">
+          <div id="previewName" class="muted small" style="margin-top:6px"></div>
+        </div>
+      </div>
     </section>
 
-    <section id="posts"></section>
+    <section id="createPostSection" class="card hidden">
+      <h3>नया पोस्ट बनाएं (फोटो/वीडियो)</h3>
+      <div class="row">
+        <div style="flex:1">
+          <label class="small">कैप्शन (वैकल्पिक)</label>
+          <input id="captionInput" placeholder="यहाँ कैप्शन लिखें" style="width:100%; padding:8px; margin-top:6px; border-radius:6px; border:1px solid #e6edf3">
+
+          <label class="small" style="display:block; margin-top:10px">फोटो या वीडियो चुनें</label>
+          <input id="mediaInput" type="file" accept="image/*,video/*">
+
+          <div style="margin-top:10px">
+            <button id="postBtn" class="button">पोस्ट करें</button>
+          </div>
+        </div>
+        <div style="width:160px; text-align:center">
+          <div class="small muted">आपके द्वारा पोस्ट किया जाएगा:</div>
+          <img id="creatorProfilePic" class="profile-thumb" src="" alt="creator">
+          <div id="creatorName" class="muted small" style="margin-top:6px"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="feedSection" class="card">
+      <h3>होम फीड</h3>
+      <div id="feedList"></div>
+    </section>
+
+    <footer>
+      यह एक क्लाइंट-साइड डेमो है — GitHub Pages पर index.html के रूप में अपलोड करें।
+    </footer>
   </main>
 
-  <script type="module" src="app.js"></script>
+  <script>
+    // Simple client-side 'backend' using localStorage
+    const STORAGE_KEYS = {USER:'pv_user_v1', POSTS:'pv_posts_v1'}
+
+    // utility: read file as dataURL
+    function fileToDataURL(file) {
+      return new Promise((res, rej) => {
+        const reader = new FileReader();
+        reader.onload = () => res(reader.result);
+        reader.onerror = rej;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // load/save functions
+    function loadUser(){
+      try{return JSON.parse(localStorage.getItem(STORAGE_KEYS.USER))}
+      catch(e){return null}
+    }
+    function saveUser(u){ localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(u)); }
+    function loadPosts(){
+      try{return JSON.parse(localStorage.getItem(STORAGE_KEYS.POSTS))||[]}
+      catch(e){return []}
+    }
+    function savePosts(p){ localStorage.setItem(STORAGE_KEYS.POSTS, JSON.stringify(p)); }
+
+    // DOM refs
+    const usernameInput = document.getElementById('usernameInput');
+    const profilePhotoInput = document.getElementById('profilePhotoInput');
+    const createAccountBtn = document.getElementById('createAccountBtn');
+    const previewProfilePic = document.getElementById('previewProfilePic');
+    const previewName = document.getElementById('previewName');
+    const currentUserPreview = document.getElementById('currentUserPreview');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    const createPostSection = document.getElementById('createPostSection');
+    const captionInput = document.getElementById('captionInput');
+    const mediaInput = document.getElementById('mediaInput');
+    const postBtn = document.getElementById('postBtn');
+    const creatorProfilePic = document.getElementById('creatorProfilePic');
+    const creatorName = document.getElementById('creatorName');
+
+    const feedList = document.getElementById('feedList');
+    const authSection = document.getElementById('authSection');
+
+    // initialize
+    let currentUser = loadUser();
+    let posts = loadPosts();
+
+    function renderUserPreview(){
+      if(currentUser){
+        previewProfilePic.src = currentUser.profilePic||'';
+        previewName.textContent = currentUser.name||'';
+        currentUserPreview.innerHTML = `<img src='${currentUser.profilePic||''}' class='profile-thumb' style='margin-right:8px'> <span class='small'>${currentUser.name}</span>`;
+        logoutBtn.classList.remove('hidden');
+        createPostSection.classList.remove('hidden');
+        authSection.querySelector('h3').textContent = 'अपना अकाउंट (सुधार/रिप्लेस)';
+        creatorProfilePic.src = currentUser.profilePic||'';
+        creatorName.textContent = currentUser.name||'';
+      } else {
+        previewProfilePic.src = '';
+        previewName.textContent = '';
+        currentUserPreview.innerHTML = '';
+        logoutBtn.classList.add('hidden');
+        createPostSection.classList.add('hidden');
+        authSection.querySelector('h3').textContent = 'अपना अकाउंट बनाएं / लॉगिन करें';
+      }
+    }
+
+    function renderFeed(){
+      feedList.innerHTML = '';
+      // newest first
+      posts.slice().reverse().forEach(post => {
+        const card = document.createElement('div'); card.className='card';
+        // header
+        const header = document.createElement('div'); header.className='row';
+        const thumb = document.createElement('img'); thumb.className='profile-thumb'; thumb.src = post.user.profilePic||'';
+        const meta = document.createElement('div');
+        meta.innerHTML = `<div style="font-weight:600">${escapeHtml(post.user.name)}</div><div class='muted small'>${new Date(post.createdAt).toLocaleString()}</div>`;
+        header.appendChild(thumb); header.appendChild(meta);
+        card.appendChild(header);
+
+        // media
+        if(post.media && post.mediaType){
+          if(post.mediaType.startsWith('image/')){
+            const img = document.createElement('img'); img.src = post.media; img.className='post-media'; img.alt = escapeHtml(post.caption||'');
+            card.appendChild(img);
+          } else if(post.mediaType.startsWith('video/')){
+            const video = document.createElement('video'); video.className='post-media'; video.controls = true; video.src = post.media;
+            card.appendChild(video);
+          }
+        }
+
+        if(post.caption){
+          const cap = document.createElement('div'); cap.style.marginTop='8px'; cap.textContent = post.caption; card.appendChild(cap);
+        }
+
+        // actions
+        const actions = document.createElement('div'); actions.className='flex-between';
+        const left = document.createElement('div');
+        const likeBtn = document.createElement('button'); likeBtn.className='like-btn small';
+        likeBtn.innerHTML = `❤️ ${post.likes||0}`;
+        likeBtn.onclick = ()=>{ toggleLike(post.id); };
+        left.appendChild(likeBtn);
+        actions.appendChild(left);
+
+        const right = document.createElement('div'); right.className='small muted'; right.textContent = `${(post.comments||[]).length} टिप्पणी`; actions.appendChild(right);
+        card.appendChild(actions);
+
+        // comments
+        const commentsWrap = document.createElement('div'); commentsWrap.className='comments';
+        (post.comments||[]).forEach(c=>{
+          const cdiv = document.createElement('div'); cdiv.className='comment';
+          cdiv.innerHTML = `<strong>${escapeHtml(c.by)}</strong> <div class='small muted'>${new Date(c.at).toLocaleString()}</div><div style='margin-top:6px'>${escapeHtml(c.text)}</div>`;
+          commentsWrap.appendChild(cdiv);
+        });
+
+        // add comment input
+        const commentForm = document.createElement('div'); commentForm.style.marginTop='8px';
+        const commentInput = document.createElement('input'); commentInput.placeholder='टिप्पणी लिखें...'; commentInput.style.padding='8px'; commentInput.style.width='70%'; commentInput.style.borderRadius='6px'; commentInput.style.border='1px solid #e6edf3';
+        const commentBtn = document.createElement('button'); commentBtn.className='button'; commentBtn.style.marginLeft='8px'; commentBtn.textContent='कमेंट';
+        commentBtn.onclick = ()=>{ addComment(post.id, commentInput.value); commentInput.value=''; };
+        commentForm.appendChild(commentInput); commentForm.appendChild(commentBtn);
+
+        card.appendChild(commentsWrap);
+        card.appendChild(commentForm);
+
+        feedList.appendChild(card);
+      });
+    }
+
+    function toggleLike(postId){
+      if(!currentUser){ alert('कृपया लॉगिन करें।'); return; }
+      posts = posts.map(p=>{
+        if(p.id===postId){
+          p.likes = (p._likedBy||[]).includes(currentUser.name) ? Math.max(0,(p.likes||0)-1) : (p.likes||0)+1;
+          if(!p._likedBy) p._likedBy=[];
+          if(p._likedBy.includes(currentUser.name)) p._likedBy = p._likedBy.filter(x=>x!==currentUser.name); else p._likedBy.push(currentUser.name);
+        }
+        return p;
+      });
+      savePosts(posts);
+      renderFeed();
+    }
+
+    function addComment(postId, text){
+      if(!currentUser){ alert('कृपया लॉगिन करें।'); return; }
+      if(!text || !text.trim()) return;
+      posts = posts.map(p=>{
+        if(p.id===postId){
+          p.comments = p.comments||[];
+          p.comments.push({by:currentUser.name, text: text.trim(), at: new Date().toISOString()});
+        }
+        return p;
+      });
+      savePosts(posts);
+      renderFeed();
+    }
+
+    // helpers
+    function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[m]; }); }
+
+    // Create or update account
+    createAccountBtn.onclick = async ()=>{
+      const name = (usernameInput.value||'').trim();
+      if(!name){ alert('कृपया नाम दर्ज करें'); return; }
+      let profilePicData = '';
+      if(profilePhotoInput.files && profilePhotoInput.files[0]){
+        try{ profilePicData = await fileToDataURL(profilePhotoInput.files[0]); }
+        catch(e){ console.error(e); alert('प्रोफ़ाइल फोटो पढ़ने में त्रुटि'); }
+      }
+      currentUser = { name, profilePic: profilePicData, createdAt: new Date().toISOString() };
+      saveUser(currentUser);
+      renderUserPreview();
+      // clear inputs
+      profilePhotoInput.value = '';
+      usernameInput.value = '';
+      previewProfilePic.src = currentUser.profilePic||'';
+      previewName.textContent = currentUser.name||'';
+      // show success
+      alert('सफलतापूर्वक लॉगिन किया गया: ' + currentUser.name);
+    }
+
+    logoutBtn.onclick = ()=>{
+      if(confirm('लॉगआउट करें?')){ currentUser = null; localStorage.removeItem(STORAGE_KEYS.USER); renderUserPreview(); }
+    }
+
+    // Post creation
+    postBtn.onclick = async ()=>{
+      if(!currentUser){ alert('कृपया पहले लॉगिन करें'); return; }
+      if(!mediaInput.files || !mediaInput.files[0]){ alert('कृपया फोटो या वीडियो चुनें'); return; }
+      const file = mediaInput.files[0];
+      if(file.size > 20 * 1024 * 1024){ if(!confirm('फाइल 20MB से बड़ी है — फिर भी अपलोड करें?')) return; }
+      let dataUrl;
+      try{ dataUrl = await fileToDataURL(file); }
+      catch(e){ console.error(e); alert('मीडिया पढ़ने में त्रुटि'); return; }
+      const post = {
+        id: 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2,8),
+        user: {name: currentUser.name, profilePic: currentUser.profilePic},
+        media: dataUrl,
+        mediaType: file.type,
+        caption: captionInput.value.trim(),
+        createdAt: new Date().toISOString(),
+        likes: 0,
+        comments: []
+      };
+      posts.push(post);
+      savePosts(posts);
+      captionInput.value = '';
+      mediaInput.value = '';
+      renderFeed();
+      alert('पोस्ट सफलतापूर्वक जोड़ा गया');
+    }
+
+    // initial rendering
+    renderUserPreview();
+    renderFeed();
+
+    // preview selected profile photo in form
+    profilePhotoInput.onchange = async ()=>{
+      if(profilePhotoInput.files && profilePhotoInput.files[0]){
+        try{ previewProfilePic.src = await fileToDataURL(profilePhotoInput.files[0]); }
+        catch(e){ console.error(e); }
+      }
+    }
+
+    // helper: reflect creator info in post box
+    function reflectCreatorToPost(){
+      const u = loadUser();
+      if(u){ creatorProfilePic.src = u.profilePic||''; creatorName.textContent = u.name||''; }
+    }
+
+    // call on load / user changes
+    setInterval(()=>{ // lightweight watcher in case storage changed in other tab
+      const latestPosts = loadPosts();
+      const latestUser = loadUser();
+      // simple deep-check by JSON
+      if(JSON.stringify(latestPosts)!==JSON.stringify(posts)){ posts = latestPosts; renderFeed(); }
+      if(JSON.stringify(latestUser)!==JSON.stringify(currentUser)){ currentUser = latestUser; renderUserPreview(); reflectCreatorToPost(); }
+    }, 1500);
+
+  </script>
 </body>
 </html>
